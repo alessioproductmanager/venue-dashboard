@@ -7,6 +7,37 @@ window.App = window.App || {};
  * without anything else needing to change.
  */
 App.Docs = {
+  init() {
+    const db = App.DB.load();
+    document.getElementById('key-huggingface').value = db.userKeys?.huggingface || '';
+    document.getElementById('key-footballdata').value = db.userKeys?.footballData || '';
+
+    document.getElementById('keys-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      App.DB.saveUserKeys({
+        huggingface: document.getElementById('key-huggingface').value.trim(),
+        footballData: document.getElementById('key-footballdata').value.trim(),
+      });
+      this.render();
+      document.getElementById('assistant-mode-tag').textContent = App.CONFIG.HUGGINGFACE_TOKEN
+        ? 'Hugging Face + local fallback' : 'Local fallback (no HF key)';
+      App.UI.toast('Keys saved to this browser only.', 'success');
+    });
+
+    document.getElementById('keys-clear-btn').addEventListener('click', () => {
+      document.getElementById('key-huggingface').value = '';
+      document.getElementById('key-footballdata').value = '';
+      App.DB.saveUserKeys({ huggingface: '', footballData: '' });
+      App.CONFIG.HUGGINGFACE_TOKEN = '';
+      App.CONFIG.FOOTBALL_DATA_TOKEN = '';
+      this.render();
+      document.getElementById('assistant-mode-tag').textContent = 'Local fallback (no HF key)';
+      App.UI.toast('Keys cleared.', 'info');
+    });
+
+    this.render();
+  },
+
   render() {
     const host = document.getElementById('readme-services');
     if (!host) return;

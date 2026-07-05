@@ -39,11 +39,11 @@
 .citation-note { font-size: 11px; color: var(--text-faint); line-height: 1.5; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); }
 
 /* ===== Editor modal ===== */
-#editor-modal {
+#editor-modal, #checkout-modal {
   position: fixed; inset: 0; background: rgba(15,23,42,0.55); z-index: 900;
   display: flex; align-items: center; justify-content: center; padding: 20px;
 }
-#editor-modal.hidden { display: none; }
+#editor-modal.hidden, #checkout-modal.hidden { display: none; }
 
 .editor-panel {
   background: var(--bg); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
@@ -92,7 +92,32 @@
 .tiq-list { padding-left: 18px; font-size: 12.5px; color: var(--text); line-height: 1.6; }
 .tiq-desc { font-size: 12.5px; color: var(--text); line-height: 1.6; }
 
-/* ===== Activity feed ===== */
+/* ===== Price calendar ===== */
+.price-calendar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; }
+.cal-day {
+  flex: 0 0 108px; border-radius: var(--radius-sm); padding: 10px 8px; text-align: center;
+  border: 1.5px solid var(--border); display: flex; flex-direction: column; gap: 3px;
+}
+.cal-day.cal-low { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.35); }
+.cal-day.cal-medium { background: rgba(217,119,6,0.07); border-color: rgba(217,119,6,0.3); }
+.cal-day.cal-high { background: rgba(220,38,38,0.07); border-color: rgba(220,38,38,0.32); }
+
+.cal-weekday { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+.cal-daynum { font-size: 16px; font-weight: 800; color: var(--ink); }
+.cal-price { font-size: 13px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+.cal-meta { font-size: 10px; color: var(--text-muted); }
+.cal-note { font-size: 9.5px; color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-apply {
+  margin-top: 6px; font-size: 10px; font-weight: 700; padding: 5px 4px; border-radius: 6px;
+  border: 1px solid var(--border-strong); background: var(--card); cursor: pointer; color: var(--text);
+}
+.cal-apply.scheduled { background: var(--action); color: #fff; border-color: var(--action); }
+
+.cal-legend { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); }
+.cal-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+.cal-swatch.cal-low { background: var(--success); }
+.cal-swatch.cal-medium { background: var(--warning); }
+.cal-swatch.cal-high { background: var(--danger); }
 .activity-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .activity-row:last-child { border-bottom: none; }
 .activity-avatar { font-size: 18px; background: var(--card-sunken); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }

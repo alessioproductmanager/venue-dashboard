@@ -15,8 +15,16 @@ App.Pricing = {
     return /dining|cirque|show|theatre|theater/i.test(`${product.name} ${product.tagline || ''}`);
   },
 
-  explainSignals(weather, events, bookingWindow, match) {
+  explainSignals(weather, events, bookingWindow, match, dest) {
     const lines = [];
+
+    if (dest) {
+      const open = App.Hours.isOpenNow(dest);
+      lines.push({
+        icon: open ? '🟢' : '⚪',
+        text: `${dest.cityName.split(',')[0]} is ${open ? 'open now' : 'closed now'} (${dest.openingHours.open}–${dest.openingHours.close} local, typical hours). ${open ? 'Live signals below are acting on today\'s visit window.' : "Outside opening hours right now — today's signals matter most for tomorrow's pricing."}`,
+      });
+    }
 
     if (weather.isWet) {
       lines.push({ icon: '🌧️', text: 'Rain forecast. Outdoor tickets typically see softer demand in this window — indoor experiences (dining, shows) usually hold or gain.' });
@@ -32,12 +40,15 @@ App.Pricing = {
     }
 
     if (match) {
-      const time = match.kickoff.toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
       const tag = match.live ? '' : ' (demo fixture)';
-      if (match.relevant) {
-        lines.push({ icon: '⚽', text: `${match.home} vs ${match.away} kicks off ${time}${tag} — the local team is playing. Expect a dip around kickoff as visitors stay in to watch rather than come to the park.` });
+      const countdown = ` · <span id="match-countdown" class="mono"></span>`;
+      const duringHours = dest ? App.Hours.isOpenAt(dest, match.kickoffUtc) : true;
+      if (!duringHours) {
+        lines.push({ icon: '⚽', text: `${match.home} vs ${match.away} — ${match.kickoffLabel} local time${tag}${countdown}. Kicks off outside opening hours — limited pricing impact for this venue.` });
+      } else if (match.relevant) {
+        lines.push({ icon: '⚽', text: `${match.home} vs ${match.away} — ${match.kickoffLabel} local time${tag}${countdown}, while the park is open. The local team is playing: expect a dip around kickoff as visitors stay in to watch rather than come to the park.` });
       } else {
-        lines.push({ icon: '⚽', text: `${match.home} vs ${match.away} kicks off ${time}${tag} — a smaller, broader dip is plausible during the match itself.` });
+        lines.push({ icon: '⚽', text: `${match.home} vs ${match.away} — ${match.kickoffLabel} local time${tag}${countdown}, while the park is open. A smaller, broader dip is plausible during the match itself.` });
       }
     }
 
@@ -51,7 +62,7 @@ App.Pricing = {
   },
 
   /** Computes one concrete suggested price for the product currently open in the editor. */
-  computeSuggestion(product, weather, events, bookingWindow, match) {
+  computeSuggestion(product, weather, events, bookingWindow, match, dest) {
     let deltaPct = 0;
     const reasons = [];
     const indoor = this.isIndoorLike(product);
@@ -64,7 +75,8 @@ App.Pricing = {
     const highImpact = events.find(e => e.impact === 'high');
     if (highImpact) { deltaPct += 15; reasons.push(`${highImpact.name} nearby`); }
 
-    if (match && match.relevant) { deltaPct -= 6; reasons.push(`${match.home} vs ${match.away} kickoff pulling local demand away`); }
+    const matchDuringHours = match && dest ? App.Hours.isOpenAt(dest, match.kickoffUtc) : !!match;
+    if (match && match.relevant && matchDuringHours) { deltaPct -= 6; reasons.push(`${match.home} vs ${match.away} kickoff pulling local demand away`); }
 
     if (bookingWindow === 'far') { deltaPct -= 5; reasons.push('early-bird window'); }
     if (bookingWindow === 'soon' && !highImpact) { deltaPct += 0; } // hold steady, no reason needed

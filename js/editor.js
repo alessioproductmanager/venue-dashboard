@@ -61,7 +61,7 @@ App.Editor = {
       price: 50, currency: App.DB.load().destinations[destKey].products[0]?.currency || '€',
       ticketOptions: [], rating: 4.5, reviews: 0,
       cancellationPolicy: 'Free cancellation up to 24 hours before your visit date.',
-      heroIcon: '🎟️', heroColor: '#0ea5e9', lastEditedBy: null,
+      heroIcon: '🎟️', heroColor: '#0ea5e9', lastEditedBy: null, priceSchedule: {},
     };
     this._openModal(true);
   },
@@ -73,6 +73,7 @@ App.Editor = {
     this.destKey = destKey;
     this.productId = productId;
     this.draft = structuredClone(product);
+    if (!this.draft.priceSchedule) this.draft.priceSchedule = {};
     this._openModal(false);
   },
 
@@ -91,6 +92,7 @@ App.Editor = {
     this._fillForm();
     this._renderPreview();
     this._renderPricingAssistant();
+    this._renderPriceCalendar();
     this._renderPushChannels();
     this._wireForm();
   },
@@ -217,7 +219,8 @@ App.Editor = {
     const events = App.Dashboard.currentEvents;
     const match = App.Dashboard.currentMatch;
     const bookingWindow = App.Dashboard.getBookingWindow();
-    const suggestion = App.Pricing.computeSuggestion(this.draft, weather, events, bookingWindow, match);
+    const dest = App.DB.load().destinations[this.destKey];
+    const suggestion = App.Pricing.computeSuggestion(this.draft, weather, events, bookingWindow, match, dest);
     document.getElementById('suggestion-text').textContent = suggestion.headline;
     document.getElementById('suggestion-price').textContent = `${this.draft.currency}${suggestion.newPrice}`;
     this._pendingSuggestion = suggestion;
@@ -228,7 +231,47 @@ App.Editor = {
     this.draft.price = this._pendingSuggestion.newPrice;
     document.getElementById('f-price').value = this.draft.price;
     this._renderPreview();
+    this._renderPriceCalendar();
     App.UI.toast('Suggested price applied — remember to save.', 'info');
+  },
+
+  // ---------- Price calendar ----------
+  _renderPriceCalendar() {
+    const host = document.getElementById('price-calendar');
+    if (!host) return;
+    const dest = App.DB.load().destinations[this.destKey];
+    const days = App.Calendar.generate(this.draft, dest, App.Dashboard.currentEvents, App.Dashboard.currentMatch);
+    const schedule = this.draft.priceSchedule || {};
+
+    host.innerHTML = days.map(d => {
+      const scheduled = schedule[d.dateKey];
+      const weekdayLabel = d.date.toLocaleDateString('en-GB', { weekday: 'short' });
+      const dayLabel = d.date.getDate();
+      return `
+        <div class="cal-day cal-${d.tier}">
+          <div class="cal-weekday">${weekdayLabel}</div>
+          <div class="cal-daynum">${dayLabel}</div>
+          <div class="cal-price">${this.draft.currency}${scheduled || d.suggestedPrice}</div>
+          <div class="cal-meta">${d.availabilityPct}% left</div>
+          <div class="cal-meta">${d.projectedSales} proj. sales</div>
+          ${d.note ? `<div class="cal-note" title="${d.note}">${d.note}</div>` : ''}
+          <button type="button" class="cal-apply ${scheduled ? 'scheduled' : ''}"
+                  onclick="App.Editor.toggleSchedule('${d.dateKey}', ${d.suggestedPrice})">
+            ${scheduled ? '📌 Scheduled' : 'Schedule'}
+          </button>
+        </div>
+      `;
+    }).join('');
+  },
+
+  toggleSchedule(dateKey, suggestedPrice) {
+    if (!this.draft.priceSchedule) this.draft.priceSchedule = {};
+    if (this.draft.priceSchedule[dateKey]) {
+      delete this.draft.priceSchedule[dateKey];
+    } else {
+      this.draft.priceSchedule[dateKey] = suggestedPrice;
+    }
+    this._renderPriceCalendar();
   },
 
   // ---------- Push channel picker ----------

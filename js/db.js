@@ -8,8 +8,8 @@ window.App = window.App || {};
  * run and read/written from every module through App.DB.get()/save().
  */
 App.CONFIG = {
-  HUGGINGFACE_TOKEN: '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', // intentionally empty — see README before adding a real one
-  FOOTBALL_DATA_TOKEN: 'bd998d84328c46f1a6981faf35530b6b', // paste your football-data.org token here — see README
+  HUGGINGFACE_TOKEN: '', // intentionally empty — see README before adding a real one
+  FOOTBALL_DATA_TOKEN: '', // paste your football-data.org token here — see README
   TOURNAMENT_CODE: 'WC',
   STORAGE_KEY: 'tiqets_hub_db_v2',
 };
@@ -18,6 +18,7 @@ App.AVATARS = ['🦁', '🐘', '🦋', '🐬', '🦉', '🦊', '🐯', '🐧', '
 
 App.SEED_DB = {
   currentUser: null, // { name, avatar }
+  userKeys: { huggingface: '', footballData: '' }, // pasted by whoever runs this, never committed
   quiz: { completed: false, score: 0, visitedVenueIds: [] },
   activityLog: [], // { id, time, user:{name,avatar}, action, productName, destKey, channels:[] }
 
@@ -31,7 +32,8 @@ App.SEED_DB = {
 
   destinations: {
     paris: {
-      cityName: 'Paris, France', lat: 48.8566, lon: 2.3522, countryTeam: 'France',
+      cityName: 'Paris, France', lat: 48.8566, lon: 2.3522, countryTeam: 'France', timezone: 'Europe/Paris',
+      openingHours: { open: '09:30', close: '22:40' },
       products: [
         {
           id: 'DIS-PAR-01', name: 'Disneyland Park Paris — 1-Day Ticket',
@@ -62,7 +64,8 @@ App.SEED_DB = {
       ],
     },
     orlando: {
-      cityName: 'Orlando, USA', lat: 28.3852, lon: -81.5639, countryTeam: 'United States',
+      cityName: 'Orlando, USA', lat: 28.3852, lon: -81.5639, countryTeam: 'United States', timezone: 'America/New_York',
+      openingHours: { open: '09:00', close: '22:00' },
       products: [
         {
           id: 'DIS-ORL-01', name: 'Magic Kingdom — General Admission',
@@ -93,7 +96,8 @@ App.SEED_DB = {
       ],
     },
     tokyo: {
-      cityName: 'Tokyo, Japan', lat: 35.6329, lon: 139.8804, countryTeam: 'Japan',
+      cityName: 'Tokyo, Japan', lat: 35.6329, lon: 139.8804, countryTeam: 'Japan', timezone: 'Asia/Tokyo',
+      openingHours: { open: '09:00', close: '21:00' },
       products: [
         {
           id: 'DIS-TYO-01', name: 'Tokyo Disneyland — Passport Ticket',
@@ -124,7 +128,8 @@ App.SEED_DB = {
       ],
     },
     anaheim: {
-      cityName: 'Anaheim, USA', lat: 33.8121, lon: -117.9190, countryTeam: 'United States',
+      cityName: 'Anaheim, USA', lat: 33.8121, lon: -117.9190, countryTeam: 'United States', timezone: 'America/Los_Angeles',
+      openingHours: { open: '08:00', close: '22:00' },
       products: [
         {
           id: 'DIS-ANH-01', name: 'Disneyland Park — 1-Day Ticket',
@@ -155,7 +160,8 @@ App.SEED_DB = {
       ],
     },
     hongkong: {
-      cityName: 'Hong Kong', lat: 22.3130, lon: 114.0417, countryTeam: 'China',
+      cityName: 'Hong Kong', lat: 22.3130, lon: 114.0417, countryTeam: 'China', timezone: 'Asia/Hong_Kong',
+      openingHours: { open: '10:30', close: '20:30' },
       products: [
         {
           id: 'DIS-HKG-01', name: 'Hong Kong Disneyland — 1-Day Ticket',
@@ -186,7 +192,8 @@ App.SEED_DB = {
       ],
     },
     shanghai: {
-      cityName: 'Shanghai, China', lat: 31.1443, lon: 121.6577, countryTeam: 'China',
+      cityName: 'Shanghai, China', lat: 31.1443, lon: 121.6577, countryTeam: 'China', timezone: 'Asia/Shanghai',
+      openingHours: { open: '08:30', close: '20:30' },
       products: [
         {
           id: 'DIS-SHA-01', name: 'Shanghai Disney Resort — 1-Day Ticket',
@@ -247,5 +254,20 @@ App.DB = {
     db.activityLog.unshift({ id: `act-${Date.now()}`, time: new Date().toLocaleString('en-GB'), ...entry });
     db.activityLog = db.activityLog.slice(0, 30);
     this.save();
+  },
+
+  /** Overlays any locally-saved keys onto App.CONFIG. Called once on boot — this is the
+   *  only place a real key ever lives: this browser's localStorage, never the committed code. */
+  applyUserKeys() {
+    const db = this.load();
+    if (db.userKeys?.huggingface) App.CONFIG.HUGGINGFACE_TOKEN = db.userKeys.huggingface;
+    if (db.userKeys?.footballData) App.CONFIG.FOOTBALL_DATA_TOKEN = db.userKeys.footballData;
+  },
+
+  saveUserKeys({ huggingface, footballData }) {
+    const db = this.load();
+    db.userKeys = { huggingface: huggingface || '', footballData: footballData || '' };
+    this.save();
+    this.applyUserKeys();
   },
 };

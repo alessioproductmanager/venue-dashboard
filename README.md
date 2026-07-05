@@ -1,4 +1,4 @@
-# Tiqets Supplier Tooling Hub — interview prototype (v3)
+# Tiqets Supplier Tooling Hub — interview prototype (v4)
 
 A working prototype built for a Junior Product Manager (B2B Supplier Tooling)
 application at Tiqets. It simulates a channel-manager for cultural venues,
@@ -41,7 +41,60 @@ creation/editing with a live preview**, and **live context for pricing**.
    to see this.
 7. **PM Profile** — the CV / case-for-hire tab.
 
-## World Cup fixtures as a pricing signal
+## New in v4
+
+- **Opening hours matter.** Each destination has representative real
+  opening hours (`js/db.js` — see sources below). Every weather/event/match
+  signal is now checked against whether the park is actually open when it
+  happens (`js/hours.js`) — a match kicking off after closing gets flagged
+  as low pricing relevance instead of triggering a discount that wouldn't
+  make sense.
+- **The Live Pricing Signals card is now actually live**, not a one-time
+  snapshot: an "updated Xs ago" label, a live match countdown, a manual
+  refresh button, and a background refresh every 90s.
+- **Price calendar** inside each product's editor — 14 days, color-coded
+  by demand tier (derived from the same weekend/event/match signals as the
+  dashboard, seeded so it's stable across renders), with demo availability
+  % and projected sales per day, and a "Schedule" button per day that sets
+  a price override (`product.priceSchedule`).
+- **Marketing Packages tab** — three tiers (Starter/Growth/Premium) per
+  product with demo impressions/CTR/booking-lift numbers and a rule-based
+  "AI suggestion" (reads the product's own status/review count — not a
+  model call, so it's reproducible and explainable). Includes a mock
+  checkout (no real payment, clearly labeled) that logs to the same
+  activity feed as pushes.
+- **Floating AI Product Assistant** (`js/assistant.js`) — ask about a
+  product's status; calls Hugging Face if a token is configured, with an
+  honest rule-based local fallback (and the same fallback fires if the
+  model is cold-loading or the call fails). Every reply is tagged with
+  its real source.
+- **Bring-your-own-key panel**, in the Read Me tab — see below.
+
+### Real opening hours used (representative baselines, not live — parks adjust by season)
+- Disneyland Paris: 09:30–22:40 (confirmed via Tiqets' own listing)
+- Magic Kingdom (Orlando): 09:00–22:00 (typical baseline, extends seasonally)
+- Tokyo Disneyland: 09:00–21:00
+- Disneyland (Anaheim): 08:00–22:00
+- Hong Kong Disneyland: 10:30–20:30
+- Shanghai Disney Resort: 08:30–20:30
+
+## Keeping real API keys out of the public repo
+
+`App.CONFIG.HUGGINGFACE_TOKEN` and `FOOTBALL_DATA_TOKEN` in `js/db.js`
+**must stay empty** in anything you commit publicly. GitHub's secret
+scanning partners with providers including Hugging Face — a real token
+pushed to a public repo gets detected and the provider is notified to
+revoke it automatically. That's not a bug to work around by hiding the
+token cleverly in the code; there is no client-side hiding place a public
+repo's scanner (or a browser's view-source) can't reach.
+
+The actual fix: keys never go in the code at all. The Read Me tab has an
+"Add your own API keys" panel — whatever you paste there is saved only to
+`localStorage` via `App.DB.saveUserKeys()` and layered onto `App.CONFIG`
+at runtime (`App.DB.applyUserKeys()`, called once on boot, before anything
+else reads `App.CONFIG`). The committed file never changes. Each person
+running this locally adds their own key if they want live data; nobody
+else's key is ever at risk, and there's nothing for a scanner to find.
 
 `js/worldcup.js` adds a second, opposite-direction signal next to nearby
 events: a big match kicked off during typical visiting hours tends to
@@ -92,10 +145,14 @@ signals"). Three real, checkable facts shaped the rules:
 |---|---|
 | Weather (Open-Meteo) | **Real, live**, no API key needed |
 | Nearby events | Mocked — small fixed dataset (`js/events.js`) |
-| World Cup fixtures | **Real, live** if `App.CONFIG.FOOTBALL_DATA_TOKEN` is set (`js/worldcup.js`) — mocked otherwise |
+| World Cup fixtures | **Real, live** if a football-data.org key is added via the Read Me tab — mocked otherwise |
+| Opening hours | Representative real baselines, not a live feed (see sources above) |
 | Smart Ingestion | Mocked — detects a destination name in the pasted URL text, doesn't scrape cross-origin |
 | OTA OAuth connect / push | Mocked — no real GetYourGuide/Viator/Klook/Expedia credentials |
 | API Monitoring (per product) | Simulated — labeled "demo only" in the UI |
+| Price calendar | Simulated demand/availability/sales — no real inventory system |
+| Marketing Packages | Simulated projections + mock checkout — no ad platform or payment processor connected |
+| AI Product Assistant | **Real Hugging Face call** if a key is added via the Read Me tab — honest rule-based fallback otherwise |
 | Login | Name + icon only, no password, no server — a label for the activity feed, not real auth |
 | "Database" | `localStorage`, wrapped in `js/db.js` — persists in the browser only |
 
