@@ -8,8 +8,8 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
-<link rel="stylesheet" href="css/quiz.css">
 <link rel="stylesheet" href="css/login.css">
+<link rel="stylesheet" href="css/start.css">
 <link rel="stylesheet" href="css/editor.css">
 <link rel="stylesheet" href="css/assistant.css">
 <link rel="stylesheet" href="css/animations.css">
@@ -36,22 +36,12 @@
   </div>
 </div>
 
-<!-- ============ ONBOARDING QUIZ ============ -->
-<div id="onboarding-screen" class="hidden">
-  <div class="onboard-wrap">
-    <div class="onboard-brand">
-      <div style="font-weight:700; font-size:15px; letter-spacing:0.02em;">
-        TIQETS <span class="dot-mark">·</span> SUPPLIER TOOLING HUB
-      </div>
-      <p>Three quick stops before your dashboard boards.</p>
-    </div>
-    <div class="stub-progress">
-      <div class="stub"></div>
-      <div class="stub"></div>
-      <div class="stub"></div>
-    </div>
-    <div id="boarding-pass-host"></div>
-    <button class="onboard-skip" onclick="App.Quiz.skip()">Skip intro — take me to the dashboard</button>
+<!-- ============ START SCREEN (one question, homepage-style) ============ -->
+<div id="start-screen" class="hidden">
+  <div class="start-wrap">
+    <div class="start-brand">TIQETS <span class="dot-mark">·</span> SUPPLIER TOOLING HUB</div>
+    <h1 class="start-question">Where do you want to start today?</h1>
+    <div id="start-options" class="start-options"></div>
   </div>
 </div>
 
@@ -510,7 +500,7 @@ back in without hardcoding secrets client-side.</pre>
 <script src="js/ota.js"></script>
 <script src="js/marketing.js"></script>
 <script src="js/apihealth.js"></script>
-<script src="js/quiz.js"></script>
+<script src="js/start.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/readme.js"></script>
 <script src="js/assistant.js"></script>

@@ -24,7 +24,7 @@ App.Dashboard = {
     App.OTA.render();
     App.Assistant.init();
 
-    const startKey = db.quiz.visitedVenueIds[0] || 'paris';
+    const startKey = db.start.chosenKey || 'paris';
     document.getElementById('destination-selector').value = startKey;
     this.loadDestination(startKey);
 
@@ -40,9 +40,9 @@ App.Dashboard = {
 
   _populateDestinationSelector(db) {
     const sel = document.getElementById('destination-selector');
-    const visited = new Set(db.quiz.visitedVenueIds || []);
+    const chosen = db.start.chosenKey;
     sel.innerHTML = Object.entries(db.destinations).map(([key, d]) => {
-      const tag = visited.has(key) ? ' ★ your venue' : '';
+      const tag = key === chosen ? ' ★ your venue' : '';
       return `<option value="${key}">${d.cityName}${tag}</option>`;
     }).join('');
   },

@@ -16,14 +16,15 @@ App.Assistant = {
   history: [],
   lastProduct: null,
 
-  // Meta's Llama models are gated — you must accept the license on the
-  // model's Hugging Face page (while logged in) before any token can use
-  // it, otherwise every call 403s. Large instruct models are also often
-  // not hosted on the free serverless Inference API at all (404) — that
-  // tier is Inference Endpoints, a paid product. If this model fails,
-  // the chat will show you the exact HTTP error so you can tell which
-  // case you're in. flan-t5-base below is small and reliably available,
-  // but its answers are noticeably weaker — a real tradeoff, not a bug.
+  // Calls the new Inference Providers router (api-inference.huggingface.co
+  // was fully decommissioned — that old endpoint now fails DNS resolution
+  // entirely, which is why this used to error with "hostname not found").
+  // Meta's Llama models are gated: visit huggingface.co/<model> and accept
+  // the license while logged in first, or any call 403s regardless of the
+  // endpoint. If no provider currently serves this exact model, you'll get
+  // a 404 — try appending ":provider" (e.g. ":together", ":groq") or swap
+  // to a model you know is hosted. The chat will show you which of these
+  // it is rather than guessing silently.
   model: 'meta-llama/Llama-3.1-8B-Instruct',
 
   SUGGESTIONS: [
@@ -120,28 +121,35 @@ App.Assistant = {
 
   _explainHfError(e) {
     const msg = e.message || String(e);
-    if (msg.includes('403')) return `Hugging Face error 403 (forbidden) — "${this.model}" is likely gated. Visit huggingface.co/${this.model}, accept the license while logged in, and make sure your token has read access. Local answer below:`;
-    if (msg.includes('404')) return `Hugging Face error 404 — "${this.model}" isn't hosted on the free serverless Inference API (common for large models; that needs paid Inference Endpoints instead). Try a smaller model like google/flan-t5-base. Local answer below:`;
+    if (msg.includes('403')) return `Hugging Face error 403 (forbidden) — "${this.model}" is likely gated. Visit huggingface.co/${this.model}, accept the license while logged in (a click, usually instant), and make sure your token has "Make calls to Inference Providers" permission. Local answer below:`;
+    if (msg.includes('404')) return `Hugging Face error 404 — no provider currently serves "${this.model}" through Inference Providers. Check huggingface.co/${this.model} for which providers list it, or try appending one, e.g. "${this.model}:together". Local answer below:`;
     if (msg.includes('503')) return `Hugging Face error 503 — the model is cold-loading. Try again in ~20s. Local answer below:`;
-    if (e.name === 'AbortError') return `Hugging Face request timed out after 12s. Local answer below:`;
-    if (msg.includes('Failed to fetch')) return `Network/CORS error reaching Hugging Face — if you opened this file directly (file://), try "npx serve" instead. Local answer below:`;
+    if (e.name === 'AbortError') return `Hugging Face request timed out after 15s. Local answer below:`;
+    if (msg.includes('Failed to fetch') || msg.includes('Load failed') || msg.includes('hostname')) return `Network error reaching Hugging Face — if you opened this file directly (file://), try "npx serve" instead, since some browsers restrict cross-origin fetch from file:// pages. Local answer below:`;
     return `Hugging Face error: ${msg}. Local answer below:`;
   },
 
   async _callHuggingFace(question) {
     const products = this._currentProducts();
     const context = products.map(p => `${p.id}: "${p.name}" — ${p.status}, €${p.price}, issue: ${p.issue}`).join('\n');
-    const recentTurns = this.history.slice(-4).map(m => `${m.role === 'user' ? 'Manager' : 'Assistant'}: ${m.text}`).join('\n');
-    const prompt = `You are a friendly assistant for a ticketing supplier dashboard. Catalog:\n${context}\n\nRecent conversation:\n${recentTurns}\n\nManager: ${question}\nAssistant:`;
+    const systemPrompt = `You are a friendly, concise assistant for a ticketing supplier dashboard. Current catalog:\n${context}\n\nAnswer briefly and specifically, in 1-3 sentences unless asked for more.`;
+
+    // this.history currently ends with [..., {user: question}, {bot: '…' placeholder}] —
+    // exclude both since the question is added explicitly below.
+    const priorTurns = this.history.slice(0, -2).slice(-6).map(m => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: m.text,
+    }));
+    const messages = [{ role: 'system', content: systemPrompt }, ...priorTurns, { role: 'user', content: question }];
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
     let res;
     try {
-      res = await fetch(`https://api-inference.huggingface.co/models/${this.model}`, {
+      res = await fetch('https://router.huggingface.co/v1/chat/completions', {
         method: 'POST',
         headers: { Authorization: `Bearer ${App.CONFIG.HUGGINGFACE_TOKEN}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inputs: prompt, parameters: { max_new_tokens: 120 } }),
+        body: JSON.stringify({ model: this.model, messages, max_tokens: 150, stream: false }),
         signal: controller.signal,
       });
     } finally {
@@ -152,9 +160,9 @@ App.Assistant = {
       throw new Error(`${res.status} ${res.statusText}${body ? ' — ' + body.slice(0, 200) : ''}`);
     }
     const data = await res.json();
-    if (data.error) throw new Error(data.error);
+    if (data.error) throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error)));
 
-    const text = Array.isArray(data) ? (data[0]?.generated_text || data[0]?.summary_text) : data.generated_text;
+    const text = data.choices?.[0]?.message?.content;
     if (!text) throw new Error('Empty response from model');
     return { text, source: 'huggingface' };
   },
@@ -275,6 +283,9 @@ App.Assistant = {
   },
 
   _updateMessage(id, text, source) {
+    const entry = this.history.find(m => m.id === id);
+    if (entry) { entry.text = text; entry.source = source; }
+
     const el = document.getElementById(id);
     if (!el) return;
     el.querySelector('.msg-bubble').innerHTML = this._escapeAndBreak(text);

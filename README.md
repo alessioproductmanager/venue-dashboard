@@ -1,4 +1,41 @@
-# Tiqets Supplier Tooling Hub — interview prototype (v4.2)
+# Tiqets Supplier Tooling Hub — interview prototype (v4.4)
+
+## Onboarding simplified: quiz → one homepage-style question
+
+The 3-step trivia quiz (which cities have a Disney park, personalization
+step) is gone. In its place: a single screen, styled like a plain search
+engine or AI-assistant homepage — "Where do you want to start today?"
+with the real destinations as the options. Choosing one goes straight to
+that destination's dashboard and is remembered (`db.start.chosenKey`),
+same as before. `js/quiz.js` is replaced by `js/start.js`; `css/quiz.css`
+by `css/start.css`.
+
+## Critical fix: Hugging Face's old Inference API endpoint no longer exists
+
+`api-inference.huggingface.co` — what the assistant called until now — was
+fully decommissioned by Hugging Face. That's a DNS-level failure ("hostname
+could not be found"), not an HTTP error, which is why it couldn't be
+caught the same way. Hugging Face replaced it with **Inference Providers**,
+a unified OpenAI-compatible router.
+
+Fixed in `js/assistant.js`:
+- New endpoint: `https://router.huggingface.co/v1/chat/completions`
+- New request shape: a proper `messages` array (`system`/`user`/`assistant`
+  roles) instead of a single `{inputs: "..."}` prompt string — this is a
+  genuinely different API, not just a URL change
+- New response shape: `data.choices[0].message.content` instead of
+  `data[0].generated_text`
+- Along the way, fixed a real bug where conversation history stored the
+  "…" thinking placeholder forever instead of the actual reply — every
+  follow-up message was sending stale context to the model. Verified with
+  a test that inspects the actual outgoing request body across two turns.
+
+If a call still fails, the chat shows the real reason instead of just
+falling back silently: 403 means the model is gated (common for Meta
+Llama — accept the license at huggingface.co/&lt;model&gt; while logged in),
+404 means no current provider serves that exact model (try appending
+`:together`, `:groq`, etc., or check the model's page for which providers
+list it), 503 means it's cold-loading.
 
 ## Errors are now visible, not silently swallowed
 
@@ -79,10 +116,11 @@ creation/editing with a live preview**, and **live context for pricing**.
 
 1. **Staff badge login** (`js/login.js`) — a name and one of ten icons, no
    password. Every edit and push in the activity feed is signed with this.
-2. **Onboarding quiz** (`js/quiz.js`) — three "boarding pass" steps: two
-   knowledge checks about which cities have a Disney park, then a
-   personalization step that reorders the destination list. Skippable;
-   remembered per browser so returning visitors go straight to the hub.
+2. **Start screen** (`js/start.js`) — one question, "Where do you want to
+   start today?", with the real destinations as options — styled like a
+   plain search/AI-assistant homepage. Choosing one is remembered
+   (`db.start.chosenKey`); returning visitors skip straight to the
+   dashboard for that destination.
 3. **Product Hub** — a grid of Tiqets-style product cards per destination.
    - **Live pricing signals**: real live weather (Open-Meteo) + a mocked
      nearby-events feed + a "booking window" control, feeding a small
@@ -234,7 +272,7 @@ No build step. Open `index.html` directly, or serve the folder:
 npx serve venue-dashboard
 ```
 
-Reset all demo state (login, quiz, catalog, connections, activity) from the
+Reset all demo state (login, start choice, catalog, connections, activity) from the
 browser console: `App.DB.reset()` — or clear site data for the page.
 
 ## About the Hugging Face key
@@ -250,10 +288,10 @@ AI call back in is a small serverless proxy that holds the key server-side.
 
 ```
 index.html
-css/  variables · base · layout · components · quiz · login · editor · animations
+css/  variables · base · layout · components · start · login · editor · animations
 js/   db (config + mock persistence + activity log) · ui · login
       weather (real) · events (mock) · worldcup (real if keyed, else mock)
       pricing (booking-window + match aware) · ota (connections + selective push + activity feed)
       apihealth (per product × 4 call types, simulated) · readme (live connected-services list)
-      quiz · editor (cards + create/edit modal + live preview + channel picker) · dashboard · app (bootstrap)
+      start (homepage-style destination picker) · editor (cards + create/edit modal + live preview + channel picker) · dashboard · app (bootstrap)
 ```

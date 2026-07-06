@@ -19,7 +19,7 @@ App.AVATARS = ['🦁', '🐘', '🦋', '🐬', '🦉', '🦊', '🐯', '🐧', '
 App.SEED_DB = {
   currentUser: null, // { name, avatar }
   userKeys: { huggingface: '', footballData: '' }, // pasted by whoever runs this, never committed
-  quiz: { completed: false, score: 0, visitedVenueIds: [] },
+  start: { completed: false, chosenKey: null },
   activityLog: [], // { id, time, user:{name,avatar}, action, productName, destKey, channels:[] }
 
   otaChannels: [
@@ -211,14 +211,6 @@ App.SEED_DB = {
       ],
     },
   },
-};
-
-// Distractor cities used only inside the quiz — never treated as venues.
-App.QUIZ_DISTRACTORS = {
-  barcelona: { name: 'Barcelona', hasPark: false },
-  rome: { name: 'Rome', hasPark: false },
-  berlin: { name: 'Berlin', hasPark: false },
-  amsterdam: { name: 'Amsterdam', hasPark: false },
 };
 
 App.DB = {

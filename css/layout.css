@@ -76,15 +76,4 @@ body { padding-bottom: 60px; }
   .nav-tabs { width: 100%; }
 }
 
-/* ===== Onboarding overlay ===== */
-#onboarding-screen {
-  position: fixed;
-  inset: 0;
-  background: var(--ink);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-}
-#onboarding-screen.hidden { display: none; }
+/* Start screen styling lives in css/start.css */

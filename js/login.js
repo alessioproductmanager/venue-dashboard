@@ -50,7 +50,7 @@ App.Login = {
 
   _enterOnboarding() {
     document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('onboarding-screen').classList.remove('hidden');
-    App.Quiz.init();
+    document.getElementById('start-screen').classList.remove('hidden');
+    App.Start.init();
   },
 };
