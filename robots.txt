@@ -112,8 +112,7 @@ User-agent: DuckAssistBot
 Allow: /
 
 # ---- Sitemap ----
-# TODO: replace YOUR-DOMAIN.com with your actual domain before publishing
-Sitemap: https://YOUR-DOMAIN.com/sitemap.xml
+Sitemap: https://alessioproductmanager.com/sitemap.xml
 
 # ---- Host preference ----
-Host: https://YOUR-DOMAIN.com
+Host: https://alessioproductmanager.com
